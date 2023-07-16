@@ -68,7 +68,15 @@
                                 class="nav-link active"
                                 aria-current="page"
                                 href="{{ url('/dashboard') }}"
-                                >Dashboard</a
+                                >{{ __("Dashboard") }}</a
+                            >
+                        </li>
+                        <li class="nav-item">
+                            <a
+                                class="nav-link active"
+                                aria-current="page"
+                                href="{{ url('/dashboard/users') }}"
+                                >{{ __("Users") }}</a
                             >
                         </li>
                     </ul>

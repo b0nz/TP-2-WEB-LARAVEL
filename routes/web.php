@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\HomeController;
+use App\Http\Controllers\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,11 +25,14 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function() {
     if (Auth::check()) {
-        return view('dashboard');
+        return view('dashboard.index');
     } else {
         return redirect()->route('showLoginForm');
     }
 })->name('dashboard');
+Route::get('/dashboard/users', [DashboardController::class, 'getUsers'])->name('dashboard.users');
+Route::get('/dashboard/users/{user}/reset-password', [DashboardController::class, 'showUserResetPasswordForm'])->name('dashboard.users.reset_password');
+Route::put('/dashboard/users/{user}/reset-password', [DashboardController::class, 'updatePassword'])->name('dashboard.users.reset_password');
 
 // register
 Route::get('/register', [AuthController::class, 'showRegistrationForm'])->name('showRegisterForm');
