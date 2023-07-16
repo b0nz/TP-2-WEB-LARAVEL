@@ -6,10 +6,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Foundation\Auth\ThrottlesLogins;
+use Illuminate\Validation\ValidationException;
 use App\Models\User;
 
 class AuthController extends Controller
 {
+    use ThrottlesLogins;
+
+    protected $maxAttempts = 3;
+    protected $decayMinutes = 0.5; // 0.5 menit = 30 detik
+
     public function showRegistrationForm()
     {
         return view('auth.register');
@@ -40,6 +47,20 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
+    public function username()
+    {
+        $field = (filter_var(request()->email, FILTER_VALIDATE_EMAIL) || !request()->email) ? 'email' : 'username';
+        request()->merge([$field => request()->email]);
+        return $field;
+    }
+
+    protected function sendFailedLoginResponse(Request $request)
+    {
+        throw ValidationException::withMessages([
+            $this->username() => [trans('auth.failed')],
+        ]);
+    }
+
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -47,15 +68,32 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        if (method_exists($this, 'hasTooManyLoginAttempts') &&
+            $this->hasTooManyLoginAttempts($request)) {
+            $this->fireLockoutEvent($request);
+            return $this->sendLockoutResponse($request);
+        }
+
         if (Auth::attempt($credentials)) {
-            // Autentikasi berhasil
+            $this->clearLoginAttempts($request);
+
             return redirect('/dashboard');
         }
 
-        // Autentikasi gagal
+        $this->incrementLoginAttempts($request);
+
+        return $this->sendFailedLoginResponse($request);
+    }
+
+    protected function sendLockoutResponse(Request $request)
+    {
+        $seconds = $this->limiter()->availableIn(
+            $this->throttleKey($request)
+        );
+
         return redirect('/login')->withErrors([
-            'email' => 'Invalid credentials',
-        ]);
+            'email' => 'Too many login attempts. Please try again in ' . $seconds . ' seconds.',
+        ])->withInput($request->only('email'));
     }
 
     public function showResetPasswordForm()
